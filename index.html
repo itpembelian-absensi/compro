@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>COMPRO SJS — Flipbook</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+  </head>
+  <body>
+    <div class="stage">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">SJS</span>
+          <div>
+            <p class="brand-kicker">Company Profile</p>
+            <h1>COMPRO SJS</h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button type="button" id="btnThumbs" class="ghost" aria-pressed="false">Daftar halaman</button>
+          <button type="button" id="btnFullscreen" class="ghost">Layar penuh</button>
+        </div>
+      </header>
+
+      <main class="viewport">
+        <button type="button" id="btnPrev" class="nav-btn nav-prev" aria-label="Halaman sebelumnya">
+          ‹
+        </button>
+        <div class="book-wrap">
+          <div id="book"></div>
+        </div>
+        <button type="button" id="btnNext" class="nav-btn nav-next" aria-label="Halaman berikutnya">
+          ›
+        </button>
+      </main>
+
+      <footer class="toolbar">
+        <span id="pageLabel">Memuat…</span>
+        <input id="pageSlider" type="range" min="0" max="0" value="0" disabled />
+        <div class="toolbar-btns">
+          <button type="button" id="btnZoomOut" class="icon">−</button>
+          <span id="zoomLabel">100%</span>
+          <button type="button" id="btnZoomIn" class="icon">+</button>
+        </div>
+      </footer>
+
+      <aside id="thumbs" class="thumbs" hidden>
+        <div class="thumbs-head">
+          <span>Daftar halaman</span>
+          <button type="button" id="btnCloseThumbs" class="icon close" aria-label="Sembunyikan daftar halaman">
+            ×
+          </button>
+        </div>
+        <div id="thumbsGrid" class="thumbs-grid"></div>
+      </aside>
+    </div>
+
+    <div id="loader" class="loader">
+      <div class="loader-card">
+        <div class="book-icon" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <p>Menyiapkan buku digital</p>
+        <div class="bar"><i id="progressBar"></i></div>
+        <small id="progressText">Memuat halaman…</small>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
