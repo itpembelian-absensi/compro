@@ -113,6 +113,12 @@ body.fs-page:not(.pager-mode) .pager {
   display: none !important;
 }
 
+.pager-mode #btnZoomIn,
+.pager-mode #btnZoomOut,
+.pager-mode #zoomLabel {
+  display: none !important;
+}
+
 .pager-mode .viewport {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -555,7 +561,9 @@ body.fs-page:not(.pager-mode) .pager {
   }
 
   .play-text,
-  #zoomLabel {
+  #zoomLabel,
+  #btnZoomIn,
+  #btnZoomOut {
     display: none;
   }
 
