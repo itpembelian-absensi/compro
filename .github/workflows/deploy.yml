@@ -11,10 +11,11 @@ jobs:
     runs-on: [self-hosted, compro]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run deploy script
+      - name: Deploy to /srv/node/compro
         run: |
-          chmod +x deploy.sh
-          ./deploy.sh
+          cd /srv/node/compro
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd -e node_modules
+          pm2 restart compro || pm2 start ecosystem.config.cjs
+          pm2 save
