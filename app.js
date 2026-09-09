@@ -15,6 +15,8 @@ const els = {
   bookWrap: document.querySelector(".book-wrap"),
   pager: document.getElementById("pager"),
   pagerImg: document.getElementById("pagerImg"),
+  pagerUnder: document.getElementById("pagerUnder"),
+  pagerZoom: document.getElementById("pagerZoom"),
 };
 
 let pageFlip = null;
@@ -27,11 +29,15 @@ const AUTOPLAY_MS = 8000;
 
 let singlePageMode = false;
 let currentIndex = 0;
+let desktopPagerIndex = 0;
 let paging = false;
 let panX = 0;
 let panY = 0;
-const PAGER_MIN_ZOOM = 1;
+const PAGER_MIN_ZOOM = 0.7;
 const PAGER_MAX_ZOOM = 3.4;
+const DESKTOP_MIN_ZOOM = 1;
+const DESKTOP_MAX_ZOOM = 1.2;
+const DESKTOP_ZOOM_STEP = 0.06;
 
 function setProgress(done, total, label) {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -54,9 +60,13 @@ function updateUi(index) {
   els.pageSlider.value = String(index);
   els.btnPrev.disabled = index <= 0;
   els.btnNext.disabled = index >= pageCount - 1;
-  if (!singlePageMode && isNativeFullscreen() && pageImages[index]) {
+  if (!singlePageMode && isDesktopPager() && pageImages[index] && !paging) {
     els.pagerImg.src = pageImages[index];
     els.pagerImg.alt = `Halaman ${human}`;
+    if (els.pagerUnder) {
+      els.pagerUnder.src = pageImages[index];
+      els.pagerUnder.alt = `Halaman ${human}`;
+    }
   }
 }
 
@@ -84,19 +94,80 @@ function setAutoplay(on) {
   if (autoplay) scheduleAutoplay();
 }
 
+function isDesktopPager() {
+  return !singlePageMode && (isNativeFullscreen() || zoom > 1.02);
+}
+
+function syncDesktopOverlay() {
+  if (singlePageMode) return;
+  const on = isDesktopPager();
+  if (on && els.pager.hidden) {
+    desktopPagerIndex = pageFlip ? pageFlip.getCurrentPageIndex() : 0;
+  }
+  document.body.classList.toggle("page-zoom", zoom > 1.02);
+  els.pager.hidden = !on;
+  if (!on && els.pagerZoom) {
+    els.pagerZoom.style.width = "";
+    els.pagerZoom.style.height = "";
+  }
+  if (on && pageImages.length && !paging) {
+    const i = getIndex();
+    els.pagerImg.src = pageImages[i];
+    els.pagerImg.alt = `Halaman ${i + 1}`;
+    if (els.pagerUnder) {
+      els.pagerUnder.src = pageImages[i];
+      els.pagerUnder.alt = `Halaman ${i + 1}`;
+    }
+  }
+  layoutDesktopZoomPage();
+}
+
+function layoutDesktopZoomPage() {
+  if (singlePageMode || !els.pagerZoom || !isDesktopPager()) return;
+  const view = document.querySelector(".viewport").getBoundingClientRect();
+  const fit = Math.min(Math.max(200, view.width - 16), Math.max(200, view.height - 12));
+  const ratio = Math.min(0.97, 0.9 + (zoom - 1) * 0.9);
+  const side = Math.max(180, Math.floor(fit * ratio));
+  els.pagerZoom.style.width = `${side}px`;
+  els.pagerZoom.style.height = `${side}px`;
+}
+
 function getIndex() {
   if (singlePageMode) return currentIndex;
+  if (isDesktopPager()) return desktopPagerIndex;
   return pageFlip ? pageFlip.getCurrentPageIndex() : 0;
 }
 
 function turnNext() {
-  if (singlePageMode) showSinglePage(currentIndex + 1, 1);
-  else pageFlip?.flipNext();
+  if (singlePageMode) {
+    showSinglePage(currentIndex + 1, 1);
+    return;
+  }
+  if (isDesktopPager()) {
+    const i = getIndex();
+    if (i >= pageCount - 1) return;
+    flipPagerTo(i + 1, 1);
+    desktopPagerIndex = i + 1;
+    pageFlip?.turnToPage(desktopPagerIndex);
+    return;
+  }
+  pageFlip?.flipNext();
 }
 
 function turnPrev() {
-  if (singlePageMode) showSinglePage(currentIndex - 1, -1);
-  else pageFlip?.flipPrev();
+  if (singlePageMode) {
+    showSinglePage(currentIndex - 1, -1);
+    return;
+  }
+  if (isDesktopPager()) {
+    const i = getIndex();
+    if (i <= 0) return;
+    flipPagerTo(i - 1, -1);
+    desktopPagerIndex = i - 1;
+    pageFlip?.turnToPage(desktopPagerIndex);
+    return;
+  }
+  pageFlip?.flipPrev();
 }
 
 function goTo(index) {
@@ -104,6 +175,13 @@ function goTo(index) {
   index = Math.max(0, Math.min(pageCount - 1, index));
   if (singlePageMode) {
     showSinglePage(index, index >= from ? 1 : -1);
+    return;
+  }
+  if (isDesktopPager()) {
+    flipPagerTo(index, index >= from ? 1 : -1);
+    desktopPagerIndex = index;
+    pageFlip?.turnToPage(index);
+    updateUi(index);
     return;
   }
   pageFlip?.turnToPage(index);
@@ -118,7 +196,7 @@ function flipAutoplayOnce() {
   } else {
     turnNext();
   }
-  if (singlePageMode) scheduleAutoplay();
+  if (singlePageMode || isDesktopPager()) scheduleAutoplay();
 }
 
 function scheduleAutoplay() {
@@ -131,19 +209,23 @@ function scheduleAutoplay() {
 function applyZoom() {
   if (singlePageMode) {
     zoom = Math.min(PAGER_MAX_ZOOM, Math.max(PAGER_MIN_ZOOM, zoom));
-    if (zoom <= 1.02) {
+    if (Math.abs(zoom - 1) <= 0.03) {
       zoom = 1;
       panX = 0;
       panY = 0;
     }
-    els.pager.style.setProperty("--zoom", String(zoom));
-    els.pager.style.setProperty("--pan-x", `${panX}px`);
-    els.pager.style.setProperty("--pan-y", `${panY}px`);
+    const zoomRoot = els.pagerZoom || els.pager;
+    zoomRoot.style.setProperty("--zoom", String(zoom));
+    zoomRoot.style.setProperty("--pan-x", `${panX}px`);
+    zoomRoot.style.setProperty("--pan-y", `${panY}px`);
     return;
   }
-  zoom = Math.min(1.8, Math.max(0.7, zoom));
-  els.bookWrap.style.setProperty("--zoom", String(zoom));
+  zoom = Math.min(DESKTOP_MAX_ZOOM, Math.max(DESKTOP_MIN_ZOOM, zoom));
+  if (zoom <= 1.02) zoom = 1;
+  els.bookWrap.style.setProperty("--zoom", "1");
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+  fitBookInViewport();
+  syncDesktopOverlay();
 }
 
 function resetPagerZoom() {
@@ -162,12 +244,7 @@ function syncFsOverlay() {
   document.body.classList.toggle("fs-page", on);
   els.btnFullscreen.setAttribute("aria-label", on ? "Keluar layar penuh" : "Layar penuh");
   if (singlePageMode) return;
-  els.pager.hidden = !on;
-  if (on && pageImages.length) {
-    const i = getIndex();
-    els.pagerImg.src = pageImages[i];
-    els.pagerImg.alt = `Halaman ${i + 1}`;
-  }
+  syncDesktopOverlay();
 }
 
 async function toggleFullscreen() {
@@ -197,39 +274,54 @@ function isMobileView() {
   return window.matchMedia("(max-width: 820px)").matches;
 }
 
-function showSinglePage(index, dir = 1) {
+function flipPagerTo(index, dir = 1) {
   if (index < 0 || index >= pageCount) return;
   if (paging) return;
-  const first = !els.pagerImg.getAttribute("src");
-  if (!first && index === currentIndex) {
+  const sheet = els.pagerImg;
+  const under = els.pagerUnder;
+  const first = !sheet.getAttribute("src");
+
+  if (first) {
+    sheet.src = pageImages[index];
+    sheet.alt = `Halaman ${index + 1}`;
+    if (under) under.src = pageImages[index];
+    currentIndex = index;
     updateUi(index);
     return;
   }
 
-  currentIndex = index;
-  updateUi(index);
-  resetPagerZoom();
-
-  if (first) {
-    els.pagerImg.src = pageImages[index];
-    els.pagerImg.alt = `Halaman ${index + 1}`;
+  if (index === (singlePageMode ? currentIndex : getIndex()) && dir) {
+    updateUi(index);
     return;
   }
 
   paging = true;
-  const img = els.pagerImg;
-  img.classList.remove("in-left", "in-right", "out-left", "out-right");
-  img.classList.add(dir > 0 ? "out-left" : "out-right");
+  if (under) {
+    under.src = pageImages[index];
+    under.alt = `Halaman ${index + 1}`;
+  }
+  sheet.classList.remove("flip-next", "flip-prev");
+  void sheet.offsetWidth;
+  sheet.classList.add(dir > 0 ? "flip-next" : "flip-prev");
+
   window.setTimeout(() => {
-    img.src = pageImages[index];
-    img.alt = `Halaman ${index + 1}`;
-    img.classList.remove("out-left", "out-right");
-    img.classList.add(dir > 0 ? "in-right" : "in-left");
-    window.setTimeout(() => {
-      img.classList.remove("in-left", "in-right");
-      paging = false;
-    }, 360);
-  }, 160);
+    sheet.src = pageImages[index];
+    sheet.alt = `Halaman ${index + 1}`;
+    sheet.classList.remove("flip-next", "flip-prev");
+    if (singlePageMode) currentIndex = index;
+    updateUi(index);
+    paging = false;
+  }, 680);
+}
+
+function showSinglePage(index, dir = 1) {
+  if (index < 0 || index >= pageCount) return;
+  if (paging) return;
+  if (index === currentIndex && els.pagerImg.getAttribute("src")) {
+    updateUi(index);
+    return;
+  }
+  flipPagerTo(index, dir);
 }
 
 function setupSinglePage(images, startPage = 0) {
@@ -328,21 +420,28 @@ function isPortraitLayout() {
 
 function bookSize() {
   const view = document.querySelector(".viewport").getBoundingClientRect();
-  if (isPortraitLayout()) {
-    return Math.max(220, Math.floor(Math.min(view.width - 12, view.height - 8)));
-  }
-  const page = Math.min(view.width / 2, view.height) * 0.92;
-  return Math.max(240, Math.floor(page));
+  const availW = Math.max(200, view.width - 24);
+  const availH = Math.max(200, view.height - 24);
+  return Math.max(160, Math.floor(Math.min(availW / 2, availH)));
+}
+
+function fitBookInViewport() {
+  if (singlePageMode || !els.bookWrap) return;
+  const view = document.querySelector(".viewport").getBoundingClientRect();
+  const w = els.book.offsetWidth || parseFloat(els.book.style.width) || 1;
+  const h = els.book.offsetHeight || parseFloat(els.book.style.height) || 1;
+  const scale = Math.max(0.25, Math.min(1, (view.width - 12) / w, (view.height - 12) / h));
+  els.bookWrap.style.setProperty("--scale", String(scale));
 }
 
 function applyBookLayout() {
   const size = bookSize();
-  const portrait = isPortraitLayout();
-  els.book.style.width = `${portrait ? size : size * 2}px`;
+  els.book.style.width = `${size * 2}px`;
   els.book.style.height = `${size}px`;
-  els.bookWrap.style.setProperty("--book-w", `${portrait ? size : size * 2}px`);
+  els.bookWrap.style.setProperty("--book-w", `${size * 2}px`);
   els.bookWrap.style.setProperty("--book-h", `${size}px`);
-  document.body.classList.toggle("portrait-book", portrait);
+  document.body.classList.remove("portrait-book");
+  fitBookInViewport();
   return size;
 }
 
@@ -370,8 +469,8 @@ function createFlipbook(images, startPage = 0) {
     size: "fixed",
     showCover: true,
     drawShadow: true,
-    flippingTime: isPortraitLayout() ? 700 : 1400,
-    usePortrait: true,
+    flippingTime: 1400,
+    usePortrait: false,
     autoSize: false,
     maxShadowOpacity: 0.45,
     mobileScrollSupport: false,
@@ -381,12 +480,18 @@ function createFlipbook(images, startPage = 0) {
   });
 
   pageFlip.loadFromImages(images);
+  fitBookInViewport();
 
   pageFlip.on("flip", (e) => {
+    if (isDesktopPager()) {
+      if (autoplay) scheduleAutoplay();
+      return;
+    }
     updateUi(e.data);
     if (autoplay) scheduleAutoplay();
   });
   pageFlip.on("changeState", () => {
+    if (isDesktopPager()) return;
     if (pageFlip) updateUi(pageFlip.getCurrentPageIndex());
   });
 
@@ -426,6 +531,12 @@ async function main() {
   els.loader.hidden = true;
 }
 
+window.addEventListener("resize", () => {
+  if (singlePageMode) return;
+  fitBookInViewport();
+  layoutDesktopZoomPage();
+});
+
 els.btnPrev.addEventListener("click", () => {
   setAutoplay(false);
   turnPrev();
@@ -445,11 +556,11 @@ els.btnPlay.addEventListener("click", (e) => {
 });
 
 els.btnZoomIn.addEventListener("click", () => {
-  zoom = +(zoom + 0.2).toFixed(1);
+  zoom = +(zoom + (singlePageMode ? 0.2 : DESKTOP_ZOOM_STEP)).toFixed(2);
   applyZoom();
 });
 els.btnZoomOut.addEventListener("click", () => {
-  zoom = +(zoom - 0.2).toFixed(1);
+  zoom = +(zoom - (singlePageMode ? 0.2 : DESKTOP_ZOOM_STEP)).toFixed(2);
   applyZoom();
 });
 

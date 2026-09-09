@@ -18,7 +18,7 @@
     <link rel="icon" href="./favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=25" />
+    <link rel="stylesheet" href="styles.css?v=36" />
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   </head>
   <body>
@@ -58,8 +58,11 @@
           ›
         </button>
         <div id="pager" class="pager" hidden>
-          <div class="pager-stage">
-            <img id="pagerImg" alt="Halaman katalog" />
+          <div class="pager-zoom" id="pagerZoom">
+            <div class="pager-stage">
+              <img id="pagerUnder" class="pager-under" alt="" />
+              <img id="pagerImg" class="pager-sheet" alt="Halaman katalog" />
+            </div>
           </div>
         </div>
       </main>
@@ -92,6 +95,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=36"></script>
   </body>
 </html>
