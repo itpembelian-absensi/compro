@@ -12,10 +12,6 @@ const els = {
   btnZoomOut: document.getElementById("btnZoomOut"),
   zoomLabel: document.getElementById("zoomLabel"),
   btnFullscreen: document.getElementById("btnFullscreen"),
-  btnThumbs: document.getElementById("btnThumbs"),
-  thumbs: document.getElementById("thumbs"),
-  thumbsGrid: document.getElementById("thumbsGrid"),
-  btnCloseThumbs: document.getElementById("btnCloseThumbs"),
   bookWrap: document.querySelector(".book-wrap"),
   pager: document.getElementById("pager"),
   pagerImg: document.getElementById("pagerImg"),
@@ -54,9 +50,10 @@ function updateUi(index) {
   els.pageSlider.value = String(index);
   els.btnPrev.disabled = index <= 0;
   els.btnNext.disabled = index >= pageCount - 1;
-  [...els.thumbsGrid.querySelectorAll("button")].forEach((btn, i) => {
-    btn.classList.toggle("active", i === index);
-  });
+  if (!singlePageMode && isNativeFullscreen() && pageImages[index]) {
+    els.pagerImg.src = pageImages[index];
+    els.pagerImg.alt = `Halaman ${human}`;
+  }
 }
 
 function syncPlayButton() {
@@ -138,6 +135,46 @@ function applyZoom() {
   els.bookWrap.style.setProperty("--zoom", String(zoom));
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
 }
+
+function isNativeFullscreen() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function syncFsOverlay() {
+  const on = isNativeFullscreen();
+  document.body.classList.toggle("fs-page", on);
+  els.btnFullscreen.setAttribute("aria-label", on ? "Keluar layar penuh" : "Layar penuh");
+  if (singlePageMode) return;
+  els.pager.hidden = !on;
+  if (on && pageImages.length) {
+    const i = getIndex();
+    els.pagerImg.src = pageImages[i];
+    els.pagerImg.alt = `Halaman ${i + 1}`;
+  }
+}
+
+async function toggleFullscreen() {
+  const root = document.querySelector(".stage");
+  try {
+    if (isNativeFullscreen()) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      return;
+    }
+    if (root.requestFullscreen) await root.requestFullscreen();
+    else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+els.btnFullscreen.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFullscreen();
+});
+document.addEventListener("fullscreenchange", syncFsOverlay);
+document.addEventListener("webkitfullscreenchange", syncFsOverlay);
 
 function isMobileView() {
   return window.matchMedia("(max-width: 820px)").matches;
@@ -239,14 +276,18 @@ function applyBookLayout() {
 }
 
 function destroyFlipbook() {
-  if (!pageFlip) return;
-  try {
-    pageFlip.destroy();
-  } catch (_) {
-    /* ignore */
+  if (pageFlip) {
+    try {
+      pageFlip.destroy();
+    } catch (_) {
+      /* ignore */
+    }
+    pageFlip = null;
   }
-  pageFlip = null;
-  els.book.innerHTML = "";
+  const next = document.createElement("div");
+  next.id = "book";
+  els.book.replaceWith(next);
+  els.book = next;
 }
 
 function createFlipbook(images, startPage = 0) {
@@ -281,23 +322,6 @@ function createFlipbook(images, startPage = 0) {
   updateUi(pageFlip.getCurrentPageIndex());
 }
 
-function buildThumbs(images) {
-  images.forEach((src, i) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = `Halaman ${i + 1}`;
-    btn.appendChild(img);
-    btn.addEventListener("click", () => {
-      setAutoplay(false);
-      goTo(i);
-      setThumbsOpen(false);
-    });
-    els.thumbsGrid.appendChild(btn);
-  });
-}
-
 async function main() {
   setProgress(0, 1, "Membaca daftar halaman…");
   const manifest = await fetch("./pages.json").then((res) => {
@@ -328,7 +352,6 @@ async function main() {
   } else {
     createFlipbook(images);
   }
-  buildThumbs(images);
   els.loader.hidden = true;
 }
 
@@ -359,29 +382,7 @@ els.btnZoomOut.addEventListener("click", () => {
   applyZoom();
 });
 
-els.btnFullscreen.addEventListener("click", async () => {
-  if (!document.fullscreenElement) {
-    await document.documentElement.requestFullscreen();
-  } else {
-    await document.exitFullscreen();
-  }
-});
-
-function setThumbsOpen(open) {
-  els.thumbs.hidden = !open;
-  els.btnThumbs.setAttribute("aria-pressed", String(open));
-}
-
-els.btnThumbs.addEventListener("click", () => {
-  setThumbsOpen(els.thumbs.hidden);
-});
-els.btnCloseThumbs.addEventListener("click", () => setThumbsOpen(false));
-
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    setThumbsOpen(false);
-    return;
-  }
   if (!pageFlip && !singlePageMode) return;
   if (e.key === " " || e.code === "Space") {
     e.preventDefault();
@@ -403,7 +404,6 @@ document.querySelector(".viewport").addEventListener(
   "wheel",
   (e) => {
     if (!pageFlip && !singlePageMode) return;
-    if (els.thumbs.contains(e.target)) return;
     const delta =
       Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     if (Math.abs(delta) < 12) return;
@@ -419,17 +419,6 @@ document.querySelector(".viewport").addEventListener(
   },
   { passive: false }
 );
-
-let resizeTimer = 0;
-window.addEventListener("resize", () => {
-  if (singlePageMode || !pageFlip || !pageImages.length) return;
-  window.clearTimeout(resizeTimer);
-  resizeTimer = window.setTimeout(() => {
-    const index = pageFlip.getCurrentPageIndex();
-    createFlipbook(pageImages, index);
-    applyZoom();
-  }, 180);
-});
 
 main().catch((err) => {
   els.progressText.textContent =
