@@ -88,27 +88,60 @@ h1 {
   display: none;
 }
 
-.pager-mode #btnOpenPdf {
-  display: inline-flex;
-}
-
 .pager-mode .book-wrap {
   display: none !important;
 }
 
+.pager-mode #btnThumbs,
+.pager-mode .thumbs {
+  display: none !important;
+}
+
 .pager-mode .viewport {
-  padding: 4px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: 8px 12px 6px;
   overflow: hidden;
 }
 
 .pager-mode .pager {
   display: grid;
-  position: absolute;
-  inset: 0;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: relative;
+  inset: auto;
   place-items: center;
-  padding: 6px 44px;
+  padding: 0;
   overflow: hidden;
   perspective: 1000px;
+  min-height: 0;
+}
+
+.pager-mode .nav-btn {
+  position: static;
+  transform: none;
+  top: auto;
+  width: 44px;
+  height: 44px;
+  margin: 8px 0 4px;
+  z-index: 4;
+}
+
+.pager-mode .nav-prev {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  left: auto;
+}
+
+.pager-mode .nav-next {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  right: auto;
 }
 
 .pager-stage {
@@ -528,9 +561,7 @@ h1 {
 
   .viewport {
     padding: 4px 6px;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    align-items: start;
+    overflow: hidden;
   }
 
   .portrait-book .book-wrap {
