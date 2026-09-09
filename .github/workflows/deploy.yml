@@ -1,0 +1,20 @@
+name: Deploy Compro
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: [self-hosted, compro]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run deploy script
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh
