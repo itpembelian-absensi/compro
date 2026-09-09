@@ -27,11 +27,15 @@ pm2_cwd() {
 }
 
 if [ -z "${APP_DIR:-}" ]; then
-  DETECTED="$(pm2_cwd || true)"
-  if [ -n "${DETECTED}" ]; then
-    APP_DIR="$DETECTED"
+  if [ -d /srv/node/compro ]; then
+    APP_DIR="/srv/node/compro"
   else
-    APP_DIR="$ROOT"
+    DETECTED="$(pm2_cwd || true)"
+    if [ -n "${DETECTED}" ]; then
+      APP_DIR="$DETECTED"
+    else
+      APP_DIR="$ROOT"
+    fi
   fi
 fi
 
