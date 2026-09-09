@@ -33,6 +33,7 @@ let desktopPagerIndex = 0;
 let paging = false;
 let panX = 0;
 let panY = 0;
+let pagerPinching = false;
 const PAGER_MIN_ZOOM = 0.7;
 const PAGER_MAX_ZOOM = 3.4;
 const DESKTOP_MIN_ZOOM = 1;
@@ -209,10 +210,16 @@ function scheduleAutoplay() {
 function applyZoom() {
   if (singlePageMode) {
     zoom = Math.min(PAGER_MAX_ZOOM, Math.max(PAGER_MIN_ZOOM, zoom));
-    if (Math.abs(zoom - 1) <= 0.03) {
+    if (!pagerPinching && Math.abs(zoom - 1) <= 0.03) {
       zoom = 1;
       panX = 0;
       panY = 0;
+    }
+    if (zoom <= 1.05) {
+      panX = 0;
+      panY = 0;
+    } else {
+      clampPagerPan();
     }
     const zoomRoot = els.pagerZoom || els.pager;
     zoomRoot.style.setProperty("--zoom", String(zoom));
@@ -336,6 +343,14 @@ function setupSinglePage(images, startPage = 0) {
   showSinglePage(startPage, 1);
 }
 
+function clampPagerPan() {
+  const view = els.pager.getBoundingClientRect();
+  const extraX = Math.max(0, (view.width * (zoom - 1)) / 2);
+  const extraY = Math.max(0, (view.height * (zoom - 1)) / 2);
+  panX = Math.min(extraX, Math.max(-extraX, panX));
+  panY = Math.min(extraY, Math.max(-extraY, panY));
+}
+
 function bindPagerSwipe() {
   let startX = 0;
   let startY = 0;
@@ -343,7 +358,7 @@ function bindPagerSwipe() {
   let startDist = 0;
   let startPanX = 0;
   let startPanY = 0;
-  let pinching = false;
+  let panning = false;
 
   const pinchDistance = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
@@ -351,17 +366,23 @@ function bindPagerSwipe() {
     return Math.hypot(dx, dy);
   };
 
+  const beginPinch = (touches) => {
+    pagerPinching = true;
+    panning = false;
+    startZoom = zoom;
+    startDist = Math.max(pinchDistance(touches), 1);
+    setAutoplay(false);
+  };
+
   els.pager.addEventListener(
     "touchstart",
     (e) => {
       if (e.touches.length >= 2) {
-        pinching = true;
-        startZoom = zoom;
-        startDist = pinchDistance(e.touches);
-        setAutoplay(false);
+        beginPinch(e.touches);
         return;
       }
-      pinching = false;
+      pagerPinching = false;
+      panning = false;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       startPanX = panX;
@@ -375,15 +396,14 @@ function bindPagerSwipe() {
     (e) => {
       if (e.touches.length >= 2) {
         e.preventDefault();
-        pinching = true;
-        if (startDist > 8) {
-          zoom = startZoom * (pinchDistance(e.touches) / startDist);
-          applyZoom();
-        }
+        if (!pagerPinching || startDist < 8) beginPinch(e.touches);
+        zoom = startZoom * (pinchDistance(e.touches) / startDist);
+        applyZoom();
         return;
       }
       if (zoom > 1.05) {
         e.preventDefault();
+        panning = true;
         panX = startPanX + (e.touches[0].clientX - startX);
         panY = startPanY + (e.touches[0].clientY - startY);
         applyZoom();
@@ -395,14 +415,17 @@ function bindPagerSwipe() {
   els.pager.addEventListener(
     "touchend",
     (e) => {
-      if (pinching) {
-        if (e.touches.length === 0) {
-          pinching = false;
+      if (pagerPinching) {
+        if (e.touches.length < 2) {
+          pagerPinching = false;
           applyZoom();
         }
         return;
       }
-      if (zoom > 1.05) return;
+      if (panning || zoom > 1.05) {
+        panning = false;
+        return;
+      }
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
