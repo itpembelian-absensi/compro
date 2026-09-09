@@ -20,6 +20,7 @@ const els = {
 };
 
 let pageFlip = null;
+let pageImages = [];
 let zoom = 1;
 let pageCount = 0;
 let autoplay = false;
@@ -95,24 +96,52 @@ function scheduleAutoplay() {
 }
 
 function applyZoom() {
+  const maxZoom = isPortraitLayout() ? 2.4 : 1.8;
+  const minZoom = isPortraitLayout() ? 1 : 0.7;
+  zoom = Math.min(maxZoom, Math.max(minZoom, zoom));
   els.bookWrap.style.setProperty("--zoom", String(zoom));
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+  els.bookWrap.classList.toggle("zoomed", zoom > 1);
+}
+
+function isPortraitLayout() {
+  const view = document.querySelector(".viewport").getBoundingClientRect();
+  return view.width < 820 || view.width < view.height * 1.05;
 }
 
 function bookSize() {
   const view = document.querySelector(".viewport").getBoundingClientRect();
-  const page = Math.min(view.width / 2, view.height) * 0.9;
+  if (isPortraitLayout()) {
+    return Math.max(220, Math.floor(Math.min(view.width - 12, view.height - 8)));
+  }
+  const page = Math.min(view.width / 2, view.height) * 0.92;
   return Math.max(240, Math.floor(page));
 }
 
 function applyBookLayout() {
   const size = bookSize();
-  els.book.style.width = `${size * 2}px`;
+  const portrait = isPortraitLayout();
+  els.book.style.width = `${portrait ? size : size * 2}px`;
   els.book.style.height = `${size}px`;
+  els.bookWrap.style.setProperty("--book-w", `${portrait ? size : size * 2}px`);
+  els.bookWrap.style.setProperty("--book-h", `${size}px`);
+  document.body.classList.toggle("portrait-book", portrait);
   return size;
 }
 
-function createFlipbook(images) {
+function destroyFlipbook() {
+  if (!pageFlip) return;
+  try {
+    pageFlip.destroy();
+  } catch (_) {
+    /* ignore */
+  }
+  pageFlip = null;
+  els.book.innerHTML = "";
+}
+
+function createFlipbook(images, startPage = 0) {
+  destroyFlipbook();
   const size = applyBookLayout();
   pageFlip = new St.PageFlip(els.book, {
     width: size,
@@ -120,14 +149,14 @@ function createFlipbook(images) {
     size: "fixed",
     showCover: true,
     drawShadow: true,
-    flippingTime: 1400,
+    flippingTime: isPortraitLayout() ? 700 : 1400,
     usePortrait: true,
     autoSize: false,
-    maxShadowOpacity: 0.5,
+    maxShadowOpacity: 0.45,
     mobileScrollSupport: false,
     useMouseEvents: true,
-    swipeDistance: 28,
-    startPage: 0,
+    swipeDistance: 24,
+    startPage: Math.min(Math.max(0, startPage), images.length - 1),
   });
 
   pageFlip.loadFromImages(images);
@@ -140,7 +169,7 @@ function createFlipbook(images) {
     if (pageFlip) updateUi(pageFlip.getCurrentPageIndex());
   });
 
-  updateUi(0);
+  updateUi(pageFlip.getCurrentPageIndex());
 }
 
 function buildThumbs(images) {
@@ -169,6 +198,7 @@ async function main() {
   });
 
   const images = manifest.pages;
+  pageImages = images;
   pageCount = images.length;
   els.pageSlider.max = String(pageCount - 1);
   els.pageSlider.disabled = false;
@@ -210,11 +240,11 @@ els.btnPlay.addEventListener("click", (e) => {
 });
 
 els.btnZoomIn.addEventListener("click", () => {
-  zoom = Math.min(1.8, +(zoom + 0.1).toFixed(1));
+  zoom = +(zoom + 0.2).toFixed(1);
   applyZoom();
 });
 els.btnZoomOut.addEventListener("click", () => {
-  zoom = Math.max(0.7, +(zoom - 0.1).toFixed(1));
+  zoom = +(zoom - 0.2).toFixed(1);
   applyZoom();
 });
 
@@ -279,9 +309,15 @@ document.querySelector(".viewport").addEventListener(
   { passive: false }
 );
 
+let resizeTimer = 0;
 window.addEventListener("resize", () => {
-  if (!pageFlip) return;
-  updateUi(pageFlip.getCurrentPageIndex());
+  if (!pageFlip || !pageImages.length) return;
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    const index = pageFlip.getCurrentPageIndex();
+    createFlipbook(pageImages, index);
+    applyZoom();
+  }, 180);
 });
 
 main().catch((err) => {
