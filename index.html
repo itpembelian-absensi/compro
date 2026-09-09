@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PT. Sahabat Jaya Sukses — Flipbook</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>PT. Sahabat Jaya Sukses — Compro</title>
+    <link rel="icon" href="./favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css?v=4" />
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   </head>
   <body>
@@ -37,8 +40,14 @@
 
       <footer class="toolbar">
         <span id="pageLabel">Memuat…</span>
-        <input id="pageSlider" type="range" min="0" max="0" value="0" disabled />
+        <div class="slider-wrap">
+          <input id="pageSlider" type="range" min="0" max="0" value="0" disabled />
+        </div>
         <div class="toolbar-btns">
+          <button type="button" id="btnPlay" class="ghost play" aria-pressed="false" aria-label="Putar otomatis">
+            <span class="play-icon" aria-hidden="true">▶</span>
+            <span class="play-text">Putar</span>
+          </button>
           <button type="button" id="btnZoomOut" class="icon">−</button>
           <span id="zoomLabel">100%</span>
           <button type="button" id="btnZoomIn" class="icon">+</button>
@@ -67,6 +76,6 @@
       </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

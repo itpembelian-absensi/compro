@@ -7,6 +7,7 @@ const els = {
   pageSlider: document.getElementById("pageSlider"),
   btnPrev: document.getElementById("btnPrev"),
   btnNext: document.getElementById("btnNext"),
+  btnPlay: document.getElementById("btnPlay"),
   btnZoomIn: document.getElementById("btnZoomIn"),
   btnZoomOut: document.getElementById("btnZoomOut"),
   zoomLabel: document.getElementById("zoomLabel"),
@@ -21,6 +22,9 @@ const els = {
 let pageFlip = null;
 let zoom = 1;
 let pageCount = 0;
+let autoplay = false;
+let autoplayTimer = null;
+const AUTOPLAY_MS = 8000;
 
 function setProgress(done, total, label) {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -46,6 +50,48 @@ function updateUi(index) {
   [...els.thumbsGrid.querySelectorAll("button")].forEach((btn, i) => {
     btn.classList.toggle("active", i === index);
   });
+}
+
+function syncPlayButton() {
+  els.btnPlay.setAttribute("aria-pressed", String(autoplay));
+  els.btnPlay.querySelector(".play-icon").textContent = autoplay ? "❚❚" : "▶";
+  els.btnPlay.querySelector(".play-text").textContent = autoplay ? "Jeda" : "Putar";
+  els.btnPlay.setAttribute(
+    "aria-label",
+    autoplay ? "Jeda putar otomatis" : "Putar otomatis"
+  );
+}
+
+function stopAutoplayTimer() {
+  if (autoplayTimer) {
+    window.clearTimeout(autoplayTimer);
+    autoplayTimer = null;
+  }
+}
+
+function setAutoplay(on) {
+  autoplay = Boolean(on);
+  stopAutoplayTimer();
+  syncPlayButton();
+  if (autoplay) scheduleAutoplay();
+}
+
+function flipAutoplayOnce() {
+  if (!autoplay || !pageFlip) return;
+  const index = pageFlip.getCurrentPageIndex();
+  if (index >= pageCount - 1) {
+    pageFlip.turnToPage(0);
+    updateUi(0);
+    scheduleAutoplay();
+    return;
+  }
+  pageFlip.flipNext();
+}
+
+function scheduleAutoplay() {
+  stopAutoplayTimer();
+  if (!autoplay || !pageFlip) return;
+  autoplayTimer = window.setTimeout(flipAutoplayOnce, AUTOPLAY_MS);
 }
 
 function applyZoom() {
@@ -74,7 +120,7 @@ function createFlipbook(images) {
     size: "fixed",
     showCover: true,
     drawShadow: true,
-    flippingTime: 900,
+    flippingTime: 1400,
     usePortrait: true,
     autoSize: false,
     maxShadowOpacity: 0.5,
@@ -86,7 +132,10 @@ function createFlipbook(images) {
 
   pageFlip.loadFromImages(images);
 
-  pageFlip.on("flip", (e) => updateUi(e.data));
+  pageFlip.on("flip", (e) => {
+    updateUi(e.data);
+    if (autoplay) scheduleAutoplay();
+  });
   pageFlip.on("changeState", () => {
     if (pageFlip) updateUi(pageFlip.getCurrentPageIndex());
   });
@@ -103,6 +152,7 @@ function buildThumbs(images) {
     img.alt = `Halaman ${i + 1}`;
     btn.appendChild(img);
     btn.addEventListener("click", () => {
+      setAutoplay(false);
       pageFlip.turnToPage(i);
       updateUi(i);
       setThumbsOpen(false);
@@ -139,12 +189,24 @@ async function main() {
   els.loader.hidden = true;
 }
 
-els.btnPrev.addEventListener("click", () => pageFlip?.flipPrev());
-els.btnNext.addEventListener("click", () => pageFlip?.flipNext());
+els.btnPrev.addEventListener("click", () => {
+  setAutoplay(false);
+  pageFlip?.flipPrev();
+});
+els.btnNext.addEventListener("click", () => {
+  setAutoplay(false);
+  pageFlip?.flipNext();
+});
 els.pageSlider.addEventListener("input", (e) => {
+  setAutoplay(false);
   const index = Number(e.target.value);
   pageFlip?.turnToPage(index);
   updateUi(index);
+});
+els.btnPlay.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setAutoplay(!autoplay);
 });
 
 els.btnZoomIn.addEventListener("click", () => {
@@ -180,8 +242,19 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (!pageFlip) return;
-  if (e.key === "ArrowRight") pageFlip.flipNext();
-  if (e.key === "ArrowLeft") pageFlip.flipPrev();
+  if (e.key === " " || e.code === "Space") {
+    e.preventDefault();
+    setAutoplay(!autoplay);
+    return;
+  }
+  if (e.key === "ArrowRight") {
+    setAutoplay(false);
+    pageFlip.flipNext();
+  }
+  if (e.key === "ArrowLeft") {
+    setAutoplay(false);
+    pageFlip.flipPrev();
+  }
 });
 
 let wheelLock = false;
@@ -196,6 +269,7 @@ document.querySelector(".viewport").addEventListener(
     e.preventDefault();
     if (wheelLock) return;
     wheelLock = true;
+    setAutoplay(false);
     if (delta > 0) pageFlip.flipNext();
     else pageFlip.flipPrev();
     window.setTimeout(() => {
