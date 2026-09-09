@@ -28,6 +28,10 @@ const AUTOPLAY_MS = 8000;
 let singlePageMode = false;
 let currentIndex = 0;
 let paging = false;
+let panX = 0;
+let panY = 0;
+const PAGER_MIN_ZOOM = 1;
+const PAGER_MAX_ZOOM = 3.4;
 
 function setProgress(done, total, label) {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -126,14 +130,27 @@ function scheduleAutoplay() {
 
 function applyZoom() {
   if (singlePageMode) {
-    zoom = Math.min(2.2, Math.max(1, zoom));
+    zoom = Math.min(PAGER_MAX_ZOOM, Math.max(PAGER_MIN_ZOOM, zoom));
+    if (zoom <= 1.02) {
+      zoom = 1;
+      panX = 0;
+      panY = 0;
+    }
     els.pager.style.setProperty("--zoom", String(zoom));
-    els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    els.pager.style.setProperty("--pan-x", `${panX}px`);
+    els.pager.style.setProperty("--pan-y", `${panY}px`);
     return;
   }
   zoom = Math.min(1.8, Math.max(0.7, zoom));
   els.bookWrap.style.setProperty("--zoom", String(zoom));
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+}
+
+function resetPagerZoom() {
+  zoom = 1;
+  panX = 0;
+  panY = 0;
+  if (singlePageMode) applyZoom();
 }
 
 function isNativeFullscreen() {
@@ -191,6 +208,7 @@ function showSinglePage(index, dir = 1) {
 
   currentIndex = index;
   updateUi(index);
+  resetPagerZoom();
 
   if (first) {
     els.pagerImg.src = pageImages[index];
@@ -229,17 +247,70 @@ function setupSinglePage(images, startPage = 0) {
 function bindPagerSwipe() {
   let startX = 0;
   let startY = 0;
+  let startZoom = 1;
+  let startDist = 0;
+  let startPanX = 0;
+  let startPanY = 0;
+  let pinching = false;
+
+  const pinchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  };
+
   els.pager.addEventListener(
     "touchstart",
     (e) => {
-      startX = e.changedTouches[0].clientX;
-      startY = e.changedTouches[0].clientY;
+      if (e.touches.length >= 2) {
+        pinching = true;
+        startZoom = zoom;
+        startDist = pinchDistance(e.touches);
+        setAutoplay(false);
+        return;
+      }
+      pinching = false;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startPanX = panX;
+      startPanY = panY;
     },
     { passive: true }
   );
+
+  els.pager.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length >= 2) {
+        e.preventDefault();
+        pinching = true;
+        if (startDist > 8) {
+          zoom = startZoom * (pinchDistance(e.touches) / startDist);
+          applyZoom();
+        }
+        return;
+      }
+      if (zoom > 1.05) {
+        e.preventDefault();
+        panX = startPanX + (e.touches[0].clientX - startX);
+        panY = startPanY + (e.touches[0].clientY - startY);
+        applyZoom();
+      }
+    },
+    { passive: false }
+  );
+
   els.pager.addEventListener(
     "touchend",
     (e) => {
+      if (pinching) {
+        if (e.touches.length === 0) {
+          pinching = false;
+          applyZoom();
+        }
+        return;
+      }
+      if (zoom > 1.05) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
