@@ -17,6 +17,7 @@ const els = {
   thumbsGrid: document.getElementById("thumbsGrid"),
   btnCloseThumbs: document.getElementById("btnCloseThumbs"),
   bookWrap: document.querySelector(".book-wrap"),
+  pdfScroll: document.getElementById("pdfScroll"),
 };
 
 let pageFlip = null;
@@ -26,6 +27,7 @@ let pageCount = 0;
 let autoplay = false;
 let autoplayTimer = null;
 const AUTOPLAY_MS = 8000;
+const PDF_SRC = "./company-profile.pdf";
 
 function setProgress(done, total, label) {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -102,6 +104,70 @@ function applyZoom() {
   els.bookWrap.style.setProperty("--zoom", String(zoom));
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
   els.bookWrap.classList.toggle("zoomed", zoom > 1);
+}
+
+function preferPdfViewer() {
+  return window.matchMedia("(max-width: 820px)").matches;
+}
+
+function loadPdfJs() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) {
+      resolve(window.pdfjsLib);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      resolve(window.pdfjsLib);
+    };
+    script.onerror = () => reject(new Error("Gagal memuat PDF.js"));
+    document.head.appendChild(script);
+  });
+}
+
+async function renderPdfPage(pdf, pageNumber, cssWidth) {
+  const page = await pdf.getPage(pageNumber);
+  const unscaled = page.getViewport({ scale: 1 });
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const viewport = page.getViewport({ scale: (cssWidth * dpr) / unscaled.width });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = "100%";
+  canvas.style.height = "auto";
+  await page.render({
+    canvasContext: canvas.getContext("2d", { alpha: false }),
+    viewport,
+  }).promise;
+  return canvas;
+}
+
+async function showPdfViewer() {
+  document.body.classList.add("pdf-mode");
+  els.pdfScroll.hidden = false;
+  setProgress(0, 1, "Membuka PDF…");
+
+  const pdfjs = await loadPdfJs();
+  const pdf = await pdfjs.getDocument(PDF_SRC).promise;
+  const cssWidth = Math.max(
+    280,
+    (els.pdfScroll.clientWidth || window.innerWidth) - 16
+  );
+
+  const first = Math.min(2, pdf.numPages);
+  for (let i = 1; i <= first; i++) {
+    els.pdfScroll.appendChild(await renderPdfPage(pdf, i, cssWidth));
+    setProgress(i, pdf.numPages, `Memuat halaman ${i} / ${pdf.numPages}`);
+  }
+  els.loader.hidden = true;
+
+  for (let i = first + 1; i <= pdf.numPages; i++) {
+    els.pdfScroll.appendChild(await renderPdfPage(pdf, i, cssWidth));
+  }
 }
 
 function isPortraitLayout() {
@@ -191,6 +257,11 @@ function buildThumbs(images) {
 }
 
 async function main() {
+  if (preferPdfViewer()) {
+    await showPdfViewer();
+    return;
+  }
+
   setProgress(0, 1, "Membaca daftar halaman…");
   const manifest = await fetch("./pages.json").then((res) => {
     if (!res.ok) throw new Error("pages.json belum ada");

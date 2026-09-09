@@ -18,7 +18,7 @@
     <link rel="icon" href="./favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=7" />
+    <link rel="stylesheet" href="styles.css?v=8" />
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   </head>
   <body>
@@ -32,6 +32,7 @@
           </div>
         </div>
         <div class="top-actions">
+          <a id="btnOpenPdf" class="ghost" href="./company-profile.pdf" target="_blank" rel="noopener">Buka PDF</a>
           <button type="button" id="btnThumbs" class="ghost" aria-pressed="false">Daftar halaman</button>
           <button type="button" id="btnFullscreen" class="ghost">Layar penuh</button>
         </div>
@@ -47,6 +48,7 @@
         <button type="button" id="btnNext" class="nav-btn nav-next" aria-label="Halaman berikutnya">
           ›
         </button>
+        <div id="pdfScroll" class="pdf-scroll" hidden></div>
       </main>
 
       <footer class="toolbar">
@@ -87,6 +89,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>
