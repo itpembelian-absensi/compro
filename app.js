@@ -54,34 +54,30 @@ function applyZoom() {
 }
 
 function bookSize() {
-  const wrap = els.bookWrap.getBoundingClientRect();
-  const page = Math.min(Math.floor(wrap.width / 2), Math.floor(wrap.height));
-  return Math.max(320, page);
+  const view = document.querySelector(".viewport").getBoundingClientRect();
+  const page = Math.min(view.width / 2, view.height) * 0.9;
+  return Math.max(240, Math.floor(page));
 }
 
 function applyBookLayout() {
   const size = bookSize();
   els.book.style.width = `${size * 2}px`;
   els.book.style.height = `${size}px`;
+  return size;
 }
 
 function createFlipbook(images) {
-  applyBookLayout();
-  const size = bookSize();
+  const size = applyBookLayout();
   pageFlip = new St.PageFlip(els.book, {
     width: size,
     height: size,
-    size: "stretch",
-    minWidth: 280,
-    maxWidth: 3000,
-    minHeight: 280,
-    maxHeight: 2000,
+    size: "fixed",
     showCover: true,
     drawShadow: true,
     flippingTime: 900,
     usePortrait: true,
-    autoSize: true,
-    maxShadowOpacity: 0.55,
+    autoSize: false,
+    maxShadowOpacity: 0.5,
     mobileScrollSupport: false,
     useMouseEvents: true,
     swipeDistance: 28,
@@ -187,6 +183,27 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") pageFlip.flipNext();
   if (e.key === "ArrowLeft") pageFlip.flipPrev();
 });
+
+let wheelLock = false;
+document.querySelector(".viewport").addEventListener(
+  "wheel",
+  (e) => {
+    if (!pageFlip) return;
+    if (els.thumbs.contains(e.target)) return;
+    const delta =
+      Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(delta) < 12) return;
+    e.preventDefault();
+    if (wheelLock) return;
+    wheelLock = true;
+    if (delta > 0) pageFlip.flipNext();
+    else pageFlip.flipPrev();
+    window.setTimeout(() => {
+      wheelLock = false;
+    }, 700);
+  },
+  { passive: false }
+);
 
 window.addEventListener("resize", () => {
   if (!pageFlip) return;
