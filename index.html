@@ -18,7 +18,7 @@
     <link rel="icon" href="./favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=10" />
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   </head>
   <body>
@@ -48,7 +48,11 @@
         <button type="button" id="btnNext" class="nav-btn nav-next" aria-label="Halaman berikutnya">
           ›
         </button>
-        <div id="pdfScroll" class="pdf-scroll" hidden></div>
+        <div id="pager" class="pager" hidden>
+          <div class="pager-stage">
+            <img id="pagerImg" alt="Halaman katalog" />
+          </div>
+        </div>
       </main>
 
       <footer class="toolbar">
@@ -89,6 +93,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=10"></script>
   </body>
 </html>

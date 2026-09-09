@@ -84,49 +84,102 @@ h1 {
   display: none;
 }
 
-.pdf-scroll {
+.pager {
   display: none;
 }
 
-.pdf-mode .stage {
-  grid-template-rows: auto 1fr;
-}
-
-.pdf-mode .toolbar,
-.pdf-mode .nav-btn,
-.pdf-mode .book-wrap,
-.pdf-mode .thumbs,
-.pdf-mode #btnThumbs {
-  display: none !important;
-}
-
-.pdf-mode #btnOpenPdf {
+.pager-mode #btnOpenPdf {
   display: inline-flex;
 }
 
-.pdf-mode .viewport {
-  padding: 0;
-  overflow: hidden;
-  display: block;
+.pager-mode .book-wrap {
+  display: none !important;
 }
 
-.pdf-mode .pdf-scroll {
-  display: block;
+.pager-mode .viewport {
+  padding: 4px 40px;
+  overflow: hidden;
+}
+
+.pager-mode .pager {
+  display: grid;
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  padding: 6px 44px;
+  overflow: hidden;
+  perspective: 1000px;
+}
+
+.pager-stage {
   width: 100%;
   height: 100%;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  background: #0f0d12;
-  padding: 8px 8px 28px;
+  display: grid;
+  place-items: center;
 }
 
-.pdf-mode .pdf-scroll canvas {
-  display: block;
-  width: 100%;
+.pager img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
-  margin: 0 auto 8px;
+  object-fit: contain;
   background: #fff;
   box-shadow: var(--shadow);
+  transform: scale(var(--zoom, 1));
+  transform-origin: center center;
+}
+
+.pager img.out-left {
+  animation: pageOutLeft 0.16s ease forwards;
+}
+
+.pager img.out-right {
+  animation: pageOutRight 0.16s ease forwards;
+}
+
+.pager img.in-right {
+  animation: pageInRight 0.36s ease;
+}
+
+.pager img.in-left {
+  animation: pageInLeft 0.36s ease;
+}
+
+@keyframes pageOutLeft {
+  to {
+    transform: rotateY(-75deg) translateX(-18%) scale(var(--zoom, 1));
+    opacity: 0;
+  }
+}
+
+@keyframes pageOutRight {
+  to {
+    transform: rotateY(75deg) translateX(18%) scale(var(--zoom, 1));
+    opacity: 0;
+  }
+}
+
+@keyframes pageInRight {
+  from {
+    transform: rotateY(75deg) translateX(18%) scale(var(--zoom, 1));
+    opacity: 0;
+  }
+  to {
+    transform: scale(var(--zoom, 1));
+    opacity: 1;
+  }
+}
+
+@keyframes pageInLeft {
+  from {
+    transform: rotateY(-75deg) translateX(-18%) scale(var(--zoom, 1));
+    opacity: 0;
+  }
+  to {
+    transform: scale(var(--zoom, 1));
+    opacity: 1;
+  }
 }
 
 .ghost,

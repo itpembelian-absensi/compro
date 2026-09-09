@@ -17,7 +17,8 @@ const els = {
   thumbsGrid: document.getElementById("thumbsGrid"),
   btnCloseThumbs: document.getElementById("btnCloseThumbs"),
   bookWrap: document.querySelector(".book-wrap"),
-  pdfScroll: document.getElementById("pdfScroll"),
+  pager: document.getElementById("pager"),
+  pagerImg: document.getElementById("pagerImg"),
 };
 
 let pageFlip = null;
@@ -27,7 +28,10 @@ let pageCount = 0;
 let autoplay = false;
 let autoplayTimer = null;
 const AUTOPLAY_MS = 8000;
-const PDF_SRC = "./company-profile.pdf";
+
+let singlePageMode = false;
+let currentIndex = 0;
+let paging = false;
 
 function setProgress(done, total, label) {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -79,100 +83,139 @@ function setAutoplay(on) {
   if (autoplay) scheduleAutoplay();
 }
 
-function flipAutoplayOnce() {
-  if (!autoplay || !pageFlip) return;
-  const index = pageFlip.getCurrentPageIndex();
-  if (index >= pageCount - 1) {
-    pageFlip.turnToPage(0);
-    updateUi(0);
-    scheduleAutoplay();
+function getIndex() {
+  if (singlePageMode) return currentIndex;
+  return pageFlip ? pageFlip.getCurrentPageIndex() : 0;
+}
+
+function turnNext() {
+  if (singlePageMode) showSinglePage(currentIndex + 1, 1);
+  else pageFlip?.flipNext();
+}
+
+function turnPrev() {
+  if (singlePageMode) showSinglePage(currentIndex - 1, -1);
+  else pageFlip?.flipPrev();
+}
+
+function goTo(index) {
+  const from = getIndex();
+  index = Math.max(0, Math.min(pageCount - 1, index));
+  if (singlePageMode) {
+    showSinglePage(index, index >= from ? 1 : -1);
     return;
   }
-  pageFlip.flipNext();
+  pageFlip?.turnToPage(index);
+  updateUi(index);
+}
+
+function flipAutoplayOnce() {
+  if (!autoplay) return;
+  const index = getIndex();
+  if (index >= pageCount - 1) {
+    goTo(0);
+  } else {
+    turnNext();
+  }
+  if (singlePageMode) scheduleAutoplay();
 }
 
 function scheduleAutoplay() {
   stopAutoplayTimer();
-  if (!autoplay || !pageFlip) return;
+  if (!autoplay) return;
+  if (!singlePageMode && !pageFlip) return;
   autoplayTimer = window.setTimeout(flipAutoplayOnce, AUTOPLAY_MS);
 }
 
 function applyZoom() {
-  const maxZoom = isPortraitLayout() ? 2.4 : 1.8;
-  const minZoom = isPortraitLayout() ? 1 : 0.7;
-  zoom = Math.min(maxZoom, Math.max(minZoom, zoom));
+  if (singlePageMode) {
+    zoom = Math.min(2.2, Math.max(1, zoom));
+    els.pager.style.setProperty("--zoom", String(zoom));
+    els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    return;
+  }
+  zoom = Math.min(1.8, Math.max(0.7, zoom));
   els.bookWrap.style.setProperty("--zoom", String(zoom));
   els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
-  els.bookWrap.classList.toggle("zoomed", zoom > 1);
 }
 
-function preferPdfViewer() {
+function isMobileView() {
   return window.matchMedia("(max-width: 820px)").matches;
 }
 
-function loadPdfJs() {
-  return new Promise((resolve, reject) => {
-    if (window.pdfjsLib) {
-      resolve(window.pdfjsLib);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
-    script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
-      resolve(window.pdfjsLib);
-    };
-    script.onerror = () => reject(new Error("Gagal memuat PDF.js"));
-    document.head.appendChild(script);
-  });
+function showSinglePage(index, dir = 1) {
+  if (index < 0 || index >= pageCount) return;
+  if (paging) return;
+  const first = !els.pagerImg.getAttribute("src");
+  if (!first && index === currentIndex) {
+    updateUi(index);
+    return;
+  }
+
+  currentIndex = index;
+  updateUi(index);
+
+  if (first) {
+    els.pagerImg.src = pageImages[index];
+    els.pagerImg.alt = `Halaman ${index + 1}`;
+    return;
+  }
+
+  paging = true;
+  const img = els.pagerImg;
+  img.classList.remove("in-left", "in-right", "out-left", "out-right");
+  img.classList.add(dir > 0 ? "out-left" : "out-right");
+  window.setTimeout(() => {
+    img.src = pageImages[index];
+    img.alt = `Halaman ${index + 1}`;
+    img.classList.remove("out-left", "out-right");
+    img.classList.add(dir > 0 ? "in-right" : "in-left");
+    window.setTimeout(() => {
+      img.classList.remove("in-left", "in-right");
+      paging = false;
+    }, 360);
+  }, 160);
 }
 
-async function renderPdfPage(pdf, pageNumber, cssWidth) {
-  const page = await pdf.getPage(pageNumber);
-  const unscaled = page.getViewport({ scale: 1 });
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const viewport = page.getViewport({ scale: (cssWidth * dpr) / unscaled.width });
-  const canvas = document.createElement("canvas");
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  canvas.style.width = "100%";
-  canvas.style.height = "auto";
-  await page.render({
-    canvasContext: canvas.getContext("2d", { alpha: false }),
-    viewport,
-  }).promise;
-  return canvas;
+function setupSinglePage(images, startPage = 0) {
+  singlePageMode = true;
+  document.body.classList.add("pager-mode");
+  els.pager.hidden = false;
+  pageImages = images;
+  pageCount = images.length;
+  currentIndex = startPage;
+  zoom = 1;
+  applyZoom();
+  showSinglePage(startPage, 1);
 }
 
-async function showPdfViewer() {
-  document.body.classList.add("pdf-mode");
-  els.pdfScroll.hidden = false;
-  setProgress(0, 1, "Membuka PDF…");
-
-  const pdfjs = await loadPdfJs();
-  const pdf = await pdfjs.getDocument(PDF_SRC).promise;
-  const cssWidth = Math.max(
-    280,
-    (els.pdfScroll.clientWidth || window.innerWidth) - 16
+function bindPagerSwipe() {
+  let startX = 0;
+  let startY = 0;
+  els.pager.addEventListener(
+    "touchstart",
+    (e) => {
+      startX = e.changedTouches[0].clientX;
+      startY = e.changedTouches[0].clientY;
+    },
+    { passive: true }
   );
-
-  const first = Math.min(2, pdf.numPages);
-  for (let i = 1; i <= first; i++) {
-    els.pdfScroll.appendChild(await renderPdfPage(pdf, i, cssWidth));
-    setProgress(i, pdf.numPages, `Memuat halaman ${i} / ${pdf.numPages}`);
-  }
-  els.loader.hidden = true;
-
-  for (let i = first + 1; i <= pdf.numPages; i++) {
-    els.pdfScroll.appendChild(await renderPdfPage(pdf, i, cssWidth));
-  }
+  els.pager.addEventListener(
+    "touchend",
+    (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+      setAutoplay(false);
+      if (dx < 0) turnNext();
+      else turnPrev();
+    },
+    { passive: true }
+  );
 }
 
 function isPortraitLayout() {
-  const view = document.querySelector(".viewport").getBoundingClientRect();
-  return view.width < 820 || view.width < view.height * 1.05;
+  return false;
 }
 
 function bookSize() {
@@ -248,8 +291,7 @@ function buildThumbs(images) {
     btn.appendChild(img);
     btn.addEventListener("click", () => {
       setAutoplay(false);
-      pageFlip.turnToPage(i);
-      updateUi(i);
+      goTo(i);
       setThumbsOpen(false);
     });
     els.thumbsGrid.appendChild(btn);
@@ -257,11 +299,6 @@ function buildThumbs(images) {
 }
 
 async function main() {
-  if (preferPdfViewer()) {
-    await showPdfViewer();
-    return;
-  }
-
   setProgress(0, 1, "Membaca daftar halaman…");
   const manifest = await fetch("./pages.json").then((res) => {
     if (!res.ok) throw new Error("pages.json belum ada");
@@ -285,24 +322,27 @@ async function main() {
   );
 
   setProgress(pageCount, pageCount, "Membuka buku…");
-  createFlipbook(images);
+  if (isMobileView()) {
+    setupSinglePage(images, 0);
+    bindPagerSwipe();
+  } else {
+    createFlipbook(images);
+  }
   buildThumbs(images);
   els.loader.hidden = true;
 }
 
 els.btnPrev.addEventListener("click", () => {
   setAutoplay(false);
-  pageFlip?.flipPrev();
+  turnPrev();
 });
 els.btnNext.addEventListener("click", () => {
   setAutoplay(false);
-  pageFlip?.flipNext();
+  turnNext();
 });
 els.pageSlider.addEventListener("input", (e) => {
   setAutoplay(false);
-  const index = Number(e.target.value);
-  pageFlip?.turnToPage(index);
-  updateUi(index);
+  goTo(Number(e.target.value));
 });
 els.btnPlay.addEventListener("click", (e) => {
   e.preventDefault();
@@ -342,7 +382,7 @@ document.addEventListener("keydown", (e) => {
     setThumbsOpen(false);
     return;
   }
-  if (!pageFlip) return;
+  if (!pageFlip && !singlePageMode) return;
   if (e.key === " " || e.code === "Space") {
     e.preventDefault();
     setAutoplay(!autoplay);
@@ -350,11 +390,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "ArrowRight") {
     setAutoplay(false);
-    pageFlip.flipNext();
+    turnNext();
   }
   if (e.key === "ArrowLeft") {
     setAutoplay(false);
-    pageFlip.flipPrev();
+    turnPrev();
   }
 });
 
@@ -362,7 +402,7 @@ let wheelLock = false;
 document.querySelector(".viewport").addEventListener(
   "wheel",
   (e) => {
-    if (!pageFlip) return;
+    if (!pageFlip && !singlePageMode) return;
     if (els.thumbs.contains(e.target)) return;
     const delta =
       Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -371,8 +411,8 @@ document.querySelector(".viewport").addEventListener(
     if (wheelLock) return;
     wheelLock = true;
     setAutoplay(false);
-    if (delta > 0) pageFlip.flipNext();
-    else pageFlip.flipPrev();
+    if (delta > 0) turnNext();
+    else turnPrev();
     window.setTimeout(() => {
       wheelLock = false;
     }, 700);
@@ -382,7 +422,7 @@ document.querySelector(".viewport").addEventListener(
 
 let resizeTimer = 0;
 window.addEventListener("resize", () => {
-  if (!pageFlip || !pageImages.length) return;
+  if (singlePageMode || !pageFlip || !pageImages.length) return;
   window.clearTimeout(resizeTimer);
   resizeTimer = window.setTimeout(() => {
     const index = pageFlip.getCurrentPageIndex();

@@ -3,7 +3,7 @@ import json
 import fitz
 
 ROOT = Path(__file__).resolve().parent
-PDF = ROOT / "COMPRO SJS REV.pdf"
+PDF = ROOT / "company-profile.pdf"
 OUT = ROOT / "pages"
 MANIFEST = ROOT / "pages.json"
 
