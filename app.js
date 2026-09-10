@@ -4,6 +4,7 @@ const els = {
   progressBar: document.getElementById("progressBar"),
   progressText: document.getElementById("progressText"),
   pageSlider: document.getElementById("pageSlider"),
+  pageSliderThumb: document.getElementById("pageSliderThumb"),
   btnPrev: document.getElementById("btnPrev"),
   btnNext: document.getElementById("btnNext"),
   btnFullscreen: document.getElementById("btnFullscreen"),
@@ -50,9 +51,24 @@ function preload(src) {
   });
 }
 
+function syncSliderThumb() {
+  const el = els.pageSlider;
+  const thumb = els.pageSliderThumb;
+  if (!el || !thumb) return;
+  const min = Number(el.min) || 0;
+  const max = Number(el.max) || 0;
+  const val = Number(el.value) || 0;
+  const pct = max <= min ? 0 : (val - min) / (max - min);
+  const track = el.parentElement.clientWidth;
+  const thumbW = thumb.offsetWidth || 48;
+  const x = Math.max(0, (track - thumbW) * pct);
+  thumb.style.transform = `translateX(${x}px)`;
+}
+
 function updateUi(index) {
   const human = index + 1;
   els.pageSlider.value = String(index);
+  syncSliderThumb();
   els.btnPrev.disabled = index <= 0;
   els.btnNext.disabled = index >= pageCount - 1;
   if (!singlePageMode && isDesktopPager() && pageImages[index] && !paging) {
@@ -515,6 +531,7 @@ async function main() {
   pageCount = images.length;
   els.pageSlider.max = String(pageCount - 1);
   els.pageSlider.disabled = false;
+  syncSliderThumb();
 
   let loaded = 0;
   await Promise.all(
@@ -537,6 +554,7 @@ async function main() {
 }
 
 window.addEventListener("resize", () => {
+  syncSliderThumb();
   if (singlePageMode) return;
   fitBookInViewport();
   layoutDesktopZoomPage();
@@ -552,6 +570,7 @@ els.btnNext.addEventListener("click", () => {
 });
 els.pageSlider.addEventListener("input", (e) => {
   setAutoplay(false);
+  syncSliderThumb();
   goTo(Number(e.target.value));
 });
 
