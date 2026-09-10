@@ -5,7 +5,7 @@
   --gold: #d4b483;
   --line: rgba(244, 239, 230, 0.12);
   --stage-bg: radial-gradient(1200px 700px at 50% 20%, #2a2430 0%, var(--bg) 58%);
-  --stage-bg-desktop: #6f6558 url("./assets/bg-desktop.jpg") center / cover no-repeat;
+  --stage-bg-desktop: #6f6558 url("./assets/bg-desktop.jpg") center 28% / cover no-repeat;
 }
 
 * {
@@ -23,9 +23,13 @@ body {
 }
 
 .stage,
-.viewport,
+.viewport {
+  background: transparent;
+}
+
 :fullscreen,
-:-webkit-full-screen {
+:-webkit-full-screen,
+body.sim-fs .stage {
   background: var(--stage-bg-desktop);
 }
 
