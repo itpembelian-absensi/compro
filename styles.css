@@ -648,6 +648,34 @@ body.fs-page .nav-next,
     width: min(280px, 62vw);
   }
 
+  #pageSlider {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  #pageSlider::-webkit-slider-runnable-track {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  #pageSlider::-webkit-slider-thumb {
+    width: 56px;
+    height: 8px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+
+  #pageSlider::-moz-range-track {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  #pageSlider::-moz-range-thumb {
+    width: 56px;
+    height: 8px;
+    background: #fff;
+  }
+
   body.fs-page .topbar,
   :fullscreen .topbar,
   :-webkit-full-screen .topbar {
