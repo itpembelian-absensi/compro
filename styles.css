@@ -17,20 +17,16 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--stage-bg);
+  background: var(--stage-bg-desktop);
   color: var(--ink);
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
 }
 
-@media (min-width: 801px) {
-  html,
-  body,
-  .stage,
-  .viewport,
-  :fullscreen,
-  :-webkit-full-screen {
-    background: var(--stage-bg-desktop);
-  }
+.stage,
+.viewport,
+:fullscreen,
+:-webkit-full-screen {
+  background: var(--stage-bg-desktop);
 }
 
 .stage {
