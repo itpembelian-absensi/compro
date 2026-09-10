@@ -3,14 +3,9 @@ const els = {
   loader: document.getElementById("loader"),
   progressBar: document.getElementById("progressBar"),
   progressText: document.getElementById("progressText"),
-  pageLabel: document.getElementById("pageLabel"),
   pageSlider: document.getElementById("pageSlider"),
   btnPrev: document.getElementById("btnPrev"),
   btnNext: document.getElementById("btnNext"),
-  btnPlay: document.getElementById("btnPlay"),
-  btnZoomIn: document.getElementById("btnZoomIn"),
-  btnZoomOut: document.getElementById("btnZoomOut"),
-  zoomLabel: document.getElementById("zoomLabel"),
   btnFullscreen: document.getElementById("btnFullscreen"),
   bookWrap: document.querySelector(".book-wrap"),
   pager: document.getElementById("pager"),
@@ -57,7 +52,6 @@ function preload(src) {
 
 function updateUi(index) {
   const human = index + 1;
-  els.pageLabel.textContent = `Halaman ${human} / ${pageCount}`;
   els.pageSlider.value = String(index);
   els.btnPrev.disabled = index <= 0;
   els.btnNext.disabled = index >= pageCount - 1;
@@ -71,14 +65,10 @@ function updateUi(index) {
   }
 }
 
-function syncPlayButton() {
-  els.btnPlay.setAttribute("aria-pressed", String(autoplay));
-  els.btnPlay.querySelector(".play-icon").textContent = autoplay ? "❚❚" : "▶";
-  els.btnPlay.querySelector(".play-text").textContent = autoplay ? "Jeda" : "Putar";
-  els.btnPlay.setAttribute(
-    "aria-label",
-    autoplay ? "Jeda putar otomatis" : "Putar otomatis"
-  );
+function setAutoplay(on) {
+  autoplay = Boolean(on);
+  stopAutoplayTimer();
+  if (autoplay) scheduleAutoplay();
 }
 
 function stopAutoplayTimer() {
@@ -86,13 +76,6 @@ function stopAutoplayTimer() {
     window.clearTimeout(autoplayTimer);
     autoplayTimer = null;
   }
-}
-
-function setAutoplay(on) {
-  autoplay = Boolean(on);
-  stopAutoplayTimer();
-  syncPlayButton();
-  if (autoplay) scheduleAutoplay();
 }
 
 function isDesktopPager() {
@@ -230,7 +213,6 @@ function applyZoom() {
   zoom = Math.min(DESKTOP_MAX_ZOOM, Math.max(DESKTOP_MIN_ZOOM, zoom));
   if (zoom <= 1.02) zoom = 1;
   els.bookWrap.style.setProperty("--zoom", "1");
-  els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
   fitBookInViewport();
   syncDesktopOverlay();
 }
@@ -571,20 +553,6 @@ els.btnNext.addEventListener("click", () => {
 els.pageSlider.addEventListener("input", (e) => {
   setAutoplay(false);
   goTo(Number(e.target.value));
-});
-els.btnPlay.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  setAutoplay(!autoplay);
-});
-
-els.btnZoomIn.addEventListener("click", () => {
-  zoom = +(zoom + (singlePageMode ? 0.2 : DESKTOP_ZOOM_STEP)).toFixed(2);
-  applyZoom();
-});
-els.btnZoomOut.addEventListener("click", () => {
-  zoom = +(zoom - (singlePageMode ? 0.2 : DESKTOP_ZOOM_STEP)).toFixed(2);
-  applyZoom();
 });
 
 document.addEventListener("keydown", (e) => {

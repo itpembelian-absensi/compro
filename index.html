@@ -18,29 +18,24 @@
     <link rel="icon" href="./favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=38" />
+    <link rel="stylesheet" href="styles.css?v=51" />
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   </head>
   <body>
     <div class="stage">
       <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark">SJS</span>
-          <div>
-            <p class="brand-kicker">Company Profile</p>
-            <h1>PT. SAHABAT JAYA SUKSES</h1>
-          </div>
-        </div>
+        <span class="brand-mark">SJS</span>
+        <h1 class="topbar-title">E-Catalogue PT. Sahabat Jaya Sukses</h1>
         <div class="top-actions">
           <button type="button" id="btnFullscreen" class="ghost icon-btn" aria-label="Layar penuh">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
+                stroke-width="2.2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"
+                d="M9 4H4v5M4 4l6 6M15 4h5v5M20 4l-6 6M9 20H4v-5M4 20l6-6M15 20h5v-5M20 20l-6-6"
               />
             </svg>
           </button>
@@ -49,13 +44,23 @@
 
       <main class="viewport">
         <button type="button" id="btnPrev" class="nav-btn nav-prev" aria-label="Halaman sebelumnya">
-          ‹
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M10 9V5.2L2.8 12 10 18.8V15c5.2.4 8.7 2.4 10.6 6.4C19.4 16 16 11.4 10 9z"
+            />
+          </svg>
         </button>
         <div class="book-wrap">
           <div id="book"></div>
         </div>
         <button type="button" id="btnNext" class="nav-btn nav-next" aria-label="Halaman berikutnya">
-          ›
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M14 9V5.2L21.2 12 14 18.8V15c-5.2.4-8.7 2.4-10.6 6.4C4.6 16 8 11.4 14 9z"
+            />
+          </svg>
         </button>
         <div id="pager" class="pager" hidden>
           <div class="pager-zoom" id="pagerZoom">
@@ -68,18 +73,8 @@
       </main>
 
       <footer class="toolbar">
-        <span id="pageLabel">Memuat…</span>
         <div class="slider-wrap">
-          <input id="pageSlider" type="range" min="0" max="0" value="0" disabled />
-        </div>
-        <div class="toolbar-btns">
-          <button type="button" id="btnPlay" class="ghost play" aria-pressed="false" aria-label="Putar otomatis">
-            <span class="play-icon" aria-hidden="true">▶</span>
-            <span class="play-text">Putar</span>
-          </button>
-          <button type="button" id="btnZoomOut" class="icon">−</button>
-          <span id="zoomLabel">100%</span>
-          <button type="button" id="btnZoomIn" class="icon">+</button>
+          <input id="pageSlider" type="range" min="0" max="0" value="0" disabled aria-label="Geser halaman" />
         </div>
       </footer>
     </div>
@@ -95,6 +90,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=38"></script>
+    <script src="app.js?v=51"></script>
   </body>
 </html>
