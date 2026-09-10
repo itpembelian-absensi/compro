@@ -574,6 +574,41 @@ els.pageSlider.addEventListener("input", (e) => {
   goTo(Number(e.target.value));
 });
 
+(function bindCustomSlider() {
+  const wrap = document.querySelector(".slider-wrap");
+  const el = els.pageSlider;
+  if (!wrap || !el) return;
+  let dragging = false;
+
+  const setFromX = (clientX) => {
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const min = Number(el.min) || 0;
+    const max = Number(el.max) || 0;
+    const index = Math.round(min + pct * (max - min));
+    el.value = String(index);
+    syncSliderThumb();
+    setAutoplay(false);
+    goTo(index);
+  };
+
+  wrap.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    wrap.setPointerCapture(e.pointerId);
+    setFromX(e.clientX);
+  });
+  wrap.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    setFromX(e.clientX);
+  });
+  const stopDrag = () => {
+    dragging = false;
+  };
+  wrap.addEventListener("pointerup", stopDrag);
+  wrap.addEventListener("pointercancel", stopDrag);
+})();
+
 document.addEventListener("keydown", (e) => {
   if (!pageFlip && !singlePageMode) return;
   if (e.key === " " || e.code === "Space") {
