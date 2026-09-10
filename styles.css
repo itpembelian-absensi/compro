@@ -92,12 +92,20 @@ body.sim-fs .stage {
 
 .topbar-title {
   margin: 0;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35em;
   font-size: 20px;
   font-weight: 400;
   letter-spacing: 0.01em;
-  white-space: nowrap;
   color: #f4f1ec;
   text-align: center;
+}
+
+.title-line {
+  white-space: nowrap;
 }
 
 .top-actions {
@@ -625,9 +633,11 @@ body.fs-page .nav-next,
 
   .topbar {
     margin: 8px 8px 0;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px;
     gap: 8px;
     border-radius: 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .toolbar {
@@ -645,14 +655,22 @@ body.fs-page .nav-next,
   }
 
   .brand-mark {
-    font-size: 18px;
+    font-size: 22px;
+    line-height: 1;
   }
 
   .topbar-title {
-    font-size: 13px;
-    max-width: 52vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    align-self: center;
+    height: 22px;
+    gap: 0;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0;
+    max-width: none;
+    overflow: visible;
   }
 
   .topbar .icon-btn {
